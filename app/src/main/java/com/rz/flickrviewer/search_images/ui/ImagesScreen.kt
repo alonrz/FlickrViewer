@@ -1,6 +1,8 @@
 package com.rz.flickrviewer.search_images.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,9 +17,14 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -87,52 +94,58 @@ private fun ImageScreenInner(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier.imePadding(),
         content = { innerPadding ->
-            SearchBox(onSearch = onSearch)
-            when (uiState) {
-                is UiState.Error -> {
-                    // Error UI is handled by LaunchedEffect above
-                    LoadingIndicator(modifier = Modifier.padding(innerPadding))
-                }
+            Column(modifier = Modifier.padding(innerPadding)) {
+                SearchBox(onSearch = onSearch)
+                when (uiState) {
+                    is UiState.Error -> {
+                        // Error UI is handled by LaunchedEffect above
+                        LoadingIndicator()
+                    }
 
-                is UiState.Success -> {
-                    ImageGrid(
-                        images = uiState.data,
-                        isLoadingMore = isLoadingMore,
-                        onLoadMore = onLoadMore,
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                    is UiState.Success -> {
+                        ImageGrid(
+                            images = uiState.data,
+                            isLoadingMore = isLoadingMore,
+                            onLoadMore = onLoadMore,
+                        )
+                    }
 
-                is UiState.Loading,
-                is UiState.Uninitialized -> {
-                    LoadingIndicator(modifier = Modifier.padding(innerPadding))
+                    is UiState.Loading,
+                    is UiState.Uninitialized -> {
+                        LoadingIndicator()
+                    }
                 }
             }
-        })
+        },
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchBox(
     onSearch: (query: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
-    SearchBar(
-        modifier = modifier.fillMaxWidth(),
-        inputField = {
-            SearchBarDefaults.InputField(
-                query = text,
-                onQueryChange = { text = it },
-                onSearch = { onSearch(text) },
-                expanded = false,
-                onExpandedChange = { /* no-op */ },
-                placeholder = { Text("Search") }
+    OutlinedTextField(
+        value = text,
+        onValueChange = { text = it },
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        placeholder = { Text("Search") },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search"
             )
         },
-        expanded = false,
-        onExpandedChange = {},
-        content = {},
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                onSearch(text)
+            }
+        ),
+        singleLine = true
     )
 }
 
@@ -144,7 +157,10 @@ fun ImageGrid(
     modifier: Modifier = Modifier
 ) {
     val gridState = rememberLazyGridState()
+    var selectedPhoto = remember { mutableStateOf<ImageEntity?>(null) }
 
+
+    // Trigger load more when we're near the end
     LaunchedEffect(gridState) {
         snapshotFlow {
             val layoutInfo = gridState.layoutInfo
@@ -152,37 +168,53 @@ fun ImageGrid(
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             lastVisibleItem to totalItems
         }.collect { (lastVisibleItem, totalItems) ->
-            // Trigger load more when we're near the end
             if (totalItems > 0 && lastVisibleItem >= totalItems - LOAD_MORE_THRESHOLD && !isLoadingMore) {
                 onLoadMore()
             }
         }
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(GRID_COLUMNS),
-        state = gridState,
-        modifier = modifier,
-        contentPadding = PaddingValues(8.dp),
-    ) {
-        items(items = images, key = { it.id }) { image ->
+    selectedPhoto.value?.let { image ->
+        Column(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
-                model = image.thumbnailUrl,
+                model = image.url,
                 contentDescription = image.title,
                 contentScale = ContentScale.FillWidth,
-                modifier = Modifier.padding(4.dp)
+                modifier = Modifier.padding(4.dp).fillMaxWidth()
+                    .clickable{
+                        selectedPhoto.value = null
+                    }
             )
+            Text(image.title)
         }
+    } ?: run {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(GRID_COLUMNS),
+            state = gridState,
+            modifier = modifier,
+            contentPadding = PaddingValues(8.dp),
+        ) {
+            items(items = images, key = { it.id }) { image ->
+                AsyncImage(
+                    model = image.thumbnailUrl,
+                    contentDescription = image.title,
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.padding(4.dp).clickable{
+                        selectedPhoto.value = image
+                    }
+                )
+            }
 
-        if (isLoadingMore) {
-            item(span = { GridItemSpan(GRID_COLUMNS) }) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+            if (isLoadingMore) {
+                item(span = { GridItemSpan(GRID_COLUMNS) }) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                    }
                 }
             }
         }

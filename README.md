@@ -3,6 +3,10 @@
 This app uses the Flickr API which displays recent photos. The app allows for the
 searching of photos as well as displays images in a grid view by default.
 
+## How to run
+Place your Flickr API key in your local.properties file.
+e.g. FLICKR_API_KEY=123456789
+
 ## Functionality
 ### Search
 - Single screen with a Text box that will let users enter text and search for images.
@@ -62,3 +66,4 @@ Format: https://live.staticflickr.com/{server-id}/{id}_{secret}.jpg
 - Close keyboard when user scrolls / after hitting enter to search
 - Squares are provided by Flickr. Add safety layer to square them by the app as well.
 - Consider different layout when rotating to landscape
+- Add shared element transition to photo clicked
