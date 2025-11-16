@@ -1,4 +1,11 @@
 # Flickr viewer app
+<img width="350"  alt="Screenshot_20251116_152347" src="https://github.com/user-attachments/assets/b88cf7a4-e56e-43e1-9551-f48066070778" />
+<img width="350"  alt="Screenshot_20251116_152337" src="https://github.com/user-attachments/assets/b9be9880-8f6a-46ea-91fa-a850ba790612" />
+
+ 
+https://github.com/user-attachments/assets/2dd26b74-4695-4d8a-a746-8dede644f407
+
+
 ## Overview
 This app uses the Flickr API which displays recent photos. The app allows for the
 searching of photos as well as displays images in a grid view by default.
@@ -62,6 +69,7 @@ Documentation: https://www.flickr.com/services/api/misc.urls.html
 Format: https://live.staticflickr.com/{server-id}/{id}_{secret}.jpg
 
 ## Next Steps
+- Adding DI
 - keep previous photos while loading is happening to prevent empty screen
 - Close keyboard when user scrolls / after hitting enter to search
 - Squares are provided by Flickr. Add safety layer to square them by the app as well.
